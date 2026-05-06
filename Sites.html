@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEWSGAME — Полный функционал</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0f0f0f; color: #fff; }
+
+        /* ШАПКА */
+        header { background: #000; border-bottom: 3px solid #ff4b2b; padding: 12px 0; position: sticky; top: 0; z-index: 1000; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .logo { font-size: 24px; font-weight: 900; color: #ff4b2b; text-decoration: none; cursor: pointer; }
+        
+        .nav-right { display: flex; align-items: center; gap: 10px; }
+        .user-info { display: none; align-items: center; gap: 10px; }
+        .user-avatar-min { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid #ff4b2b; }
+
+        .btn-reg { background: #fff; color: #000; border: none; padding: 8px 16px; border-radius: 5px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        .btn-admin { background: #ff4b2b; color: #fff; border: none; padding: 8px 16px; border-radius: 5px; font-size: 13px; font-weight: bold; cursor: pointer; }
+
+        /* КОНТЕЙНЕР */
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+
+        /* МОДАЛКА РЕГИСТРАЦИИ */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
+        .modal-content { background: #1a1a1a; margin: 5% auto; padding: 30px; width: 400px; border-radius: 15px; border: 1px solid #333; position: relative; }
+        .close { position: absolute; right: 20px; top: 15px; font-size: 28px; cursor: pointer; color: #888; }
+        
+        .avatar-upload { text-align: center; margin-bottom: 15px; }
+        #avatarPreview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: #333; border: 2px solid #ff4b2b; }
+        
+        .gender-select { display: flex; gap: 10px; margin: 15px 0; }
+        .gender-option { flex: 1; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; text-align: center; cursor: pointer; }
+        .gender-option.active { border-color: #ff4b2b; color: #ff4b2b; background: rgba(255, 75, 43, 0.1); }
+        
+        input { width: 100%; padding: 12px; margin: 8px 0; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 6px; }
+        .btn-submit { width: 100%; padding: 14px; background: #ff4b2b; border: none; color: #fff; font-weight: bold; border-radius: 6px; cursor: pointer; }
+
+        /* НОВОСТИ */
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
+        .news-card { background: #1a1a1a; border-radius: 10px; overflow: hidden; border: 1px solid #222; }
+        .news-card img { width: 100%; height: 200px; object-fit: cover; }
+        .news-content { padding: 15px; }
+        .news-footer { display: flex; gap: 20px; border-top: 1px solid #222; padding-top: 15px; margin-top: 10px; }
+        .like-btn { cursor: pointer; background: none; border: none; color: #888; font-size: 16px; transition: 0.2s; }
+        .like-btn.active { color: #ff4b2b; transform: scale(1.2); }
+        
+        #adminPanel { display: none; background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #ff4b2b; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <nav class="navbar">
+        <div class="logo">NEWSGAME</div>
+        <div class="nav-right">
+            <div id="userInfo" class="user-info">
+                <img id="headerAvatar" class="user-avatar-min" src="">
+                <span id="headerName"></span>
+                <button onclick="logout()" style="background:none; border:none; color:#ff4b2b; cursor:pointer; font-size:11px;">Выйти</button>
+            </div>
+            <button id="regBtnTop" class="btn-reg" onclick="openModal('regModal')">Регистрация</button>
+            <button class="btn-admin" onclick="adminLogin()">АДМИН</button>
+        </div>
+    </nav>
+</header>
+
+<div class="container">
+    <div id="adminPanel">
+        <h3>Панель администратора</h3>
+        <input type="text" id="newsTitle" placeholder="Заголовок">
+        <textarea id="newsText" style="width:100%; background:#2a2a2a; color:#fff; padding:10px; margin:10px 0;" rows="3" placeholder="Текст новости"></textarea>
+        <input type="file" id="newsImage">
+        <button class="btn-submit" onclick="addNews()">ОПУБЛИКОВАТЬ</button>
+    </div>
+
+    <div class="news-grid" id="newsGrid"></div>
+</div>
+
+<!-- МОДАЛКА РЕГИСТРАЦИИ -->
+<div id="regModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('regModal')">&times;</span>
+        <h2 style="text-align:center; color:#ff4b2b; margin-bottom:15px;">Создать профиль</h2>
+        
+        <div class="avatar-upload">
+            <img id="avatarPreview" src="https://placeholder.com" alt="Avatar">
+            <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="previewAvatar(this)">
+            <button onclick="document.getElementById('avatarInput').click()" style="display:block; margin: 10px auto; background:none; border:1px solid #555; color:#aaa; cursor:pointer; padding:3px 10px; border-radius:4px;">Выбрать аватар</button>
+        </div>
+
+        <input type="text" id="regName" placeholder="Никнейм">
+        <div class="gender-select">
+            <div class="gender-option" onclick="setGender(this, 'М')">Мужчина</div>
+            <div class="gender-option" onclick="setGender(this, 'Ж')">Женщина</div>
+        </div>
+        <button class="btn-submit" onclick="saveUser()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+    </div>
+</div>
+
+<script>
+    let isAdmin = false;
+    let selectedGender = "";
+    let userAvatar = "";
+
+    window.onload = () => {
+        checkUser();
+        renderNews();
+    };
+
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function previewAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('avatarPreview').src = e.target.result;
+                userAvatar = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function setGender(el, g) {
+        document.querySelectorAll('.gender-option').forEach(o => o.classList.remove('active'));
+        el.classList.add('active');
+        selectedGender = g;
+    }
+
+    // Сохранение пользователя
+    function saveUser() {
+        const name = document.getElementById('regName').value;
+        if(!name || !selectedGender) return alert("Заполни все поля!");
+        
+        const userData = { name, gender: selectedGender, avatar: userAvatar || 'https://placeholder.com' };
+        localStorage.setItem('ng_user', JSON.stringify(userData));
+        checkUser();
+        closeModal('regModal');
+    }
+
+    function checkUser() {
+        const user = JSON.parse(localStorage.getItem('ng_user'));
+        if(user) {
+            document.getElementById('regBtnTop').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('headerName').innerText = user.name;
+            document.getElementById('headerAvatar').src = user.avatar;
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('ng_user');
+        location.reload();
+    }
+
+    function adminLogin() {
+        if(prompt("Код:") === "8787") {
+            isAdmin = true;
+            document.getElementById('adminPanel').style.display = 'block';
+            renderNews();
+        }
+    }
+
+    function addNews() {
+        const title = document.getElementById('newsTitle').value;
+        const text = document.getElementById('newsText').value;
+        const file = document.getElementById('newsImage').files[0];
+        if(!title || !file) return alert("Заполни данные!");
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const db = JSON.parse(localStorage.getItem('ng_db') || '[]');
+            db.unshift({ id: Date.now(), title, text, img: e.target.result, likes: 0, likedByMe: false });
+            localStorage.setItem('ng_db', JSON.stringify(db));
+            renderNews();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function renderNews() {
+        const grid = document.getElementById('newsGrid');
+        const db = JSON.parse(localStorage.getItem('ng_db') || '[]');
+        grid.innerHTML = db.map(n => `
+            <div class="news-card">
+                <img src="${n.img}">
+                <div class="news-content">
+                    <h3>${n.title}</h3>
+                    <p style="font-size:14px; color:#ccc; margin:10px 0;">${n.text}</p>
+                    <div class="news-footer">
+                        <button class="like-btn ${n.likedByMe ? 'active' : ''}" onclick="toggleLike(${n.id})">
+                            ❤️ <span>${n.likes}</span>
+                        </button>
+                        <button class="like-btn" onclick="addComment()">💬 0</button>
+                    </div>
+                    ${isAdmin ? `<button onclick="delPost(${n.id})" style="background:red; color:#fff; border:none; margin-top:10px; padding:5px; border-radius:4px; cursor:pointer;">Удалить</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleLike(id) {
+        let db = JSON.parse(localStorage.getItem('ng_db') || '[]');
+        const post = db.find(n => n.id === id);
+        if(post.likedByMe) {
+            post.likes--;
+            post.likedByMe = false;
+        } else {
+            post.likes++;
+            post.likedByMe = true;
+        }
+        localStorage.setItem('ng_db', JSON.stringify(db));
+        renderNews();
+    }
+
+    function delPost(id) {
+        let db = JSON.parse(localStorage.getItem('ng_db') || '[]');
+        localStorage.setItem('ng_db', JSON.stringify(db.filter(x => x.id !== id)));
+        renderNews();
+    }
+
+    function addComment() {
+        if(!localStorage.getItem('ng_user')) return alert("Сначала зарегистрируйся!");
+        alert("Функция комментариев в разработке!");
+    }
+</script>
+</body>
+</html>
